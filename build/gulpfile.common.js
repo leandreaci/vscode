@@ -143,9 +143,7 @@ exports.optimizeTask = function(opts) {
 			var filteredResources = [];
 			filteredResources = filteredResources.concat(resources);
 			result.cssInlinedResources.forEach(function(resource) {
-				if (process.env['VSCODE_BUILD_VERBOSE']) {
-					log('optimizer', 'excluding inlined: ' + resource);
-				}
+				log('optimizer', 'excluding inlined: ' + resource);
 				filteredResources.push('!' + resource);
 			});
 			gulp.src(filteredResources, { base: 'out-build' }).pipe(resourcesStream);

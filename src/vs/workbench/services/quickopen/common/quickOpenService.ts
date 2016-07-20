@@ -79,7 +79,7 @@ export interface IShowOptions {
 	quickNavigateConfiguration?: IQuickNavigateConfiguration;
 }
 
-export const IQuickOpenService = createDecorator<IQuickOpenService>('quickOpenService');
+export var IQuickOpenService = createDecorator<IQuickOpenService>('quickOpenService');
 
 export interface IQuickOpenService {
 

@@ -21,6 +21,7 @@ import model = require('vs/workbench/parts/debug/common/debugModel');
 import { BreakpointWidget } from 'vs/workbench/parts/debug/browser/breakpointWidget';
 import { IPartService } from 'vs/workbench/services/part/common/partService';
 import { IPanelService } from 'vs/workbench/services/panel/common/panelService';
+import { IViewletService } from 'vs/workbench/services/viewlet/common/viewletService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import IDebugService = debug.IDebugService;
 
@@ -652,6 +653,30 @@ export class AddWatchExpressionAction extends AbstractDebugAction {
 	}
 }
 
+export class SelectionToWatchExpressionsAction extends EditorAction {
+	static ID = 'editor.debug.action.selectionToWatch';
+
+	constructor(descriptor: editorCommon.IEditorActionDescriptorData, editor: editorCommon.ICommonCodeEditor, @IDebugService private debugService: IDebugService, @IViewletService private viewletService: IViewletService) {
+		super(descriptor, editor, Behaviour.TextFocus);
+	}
+
+	public run(): TPromise<any> {
+		const text = this.editor.getModel().getValueInRange(this.editor.getSelection());
+		return this.viewletService.openViewlet(debug.VIEWLET_ID).then(() => this.debugService.addWatchExpression(text));
+	}
+
+	public getGroupId(): string {
+		return '5_debug/3_selection_to_watch';
+	}
+
+	public shouldShowInContextMenu(): boolean {
+		const selection = this.editor.getSelection();
+		const text = this.editor.getModel().getValueInRange(selection);
+
+		return !!selection && !selection.isEmpty() && this.debugService.getConfigurationManager().configurationName && text && /\S/.test(text);
+	}
+}
+
 export class SelectionToReplAction extends EditorAction {
 	static ID = 'editor.debug.action.selectionToRepl';
 
@@ -661,7 +686,7 @@ export class SelectionToReplAction extends EditorAction {
 		@IDebugService private debugService: IDebugService,
 		@IPanelService private panelService: IPanelService
 	) {
-		super(descriptor, editor, Behaviour.UpdateOnCursorPositionChange);
+		super(descriptor, editor, Behaviour.TextFocus);
 	}
 
 	public run(): TPromise<any> {
@@ -670,17 +695,13 @@ export class SelectionToReplAction extends EditorAction {
 			.then(() => this.panelService.openPanel(debug.REPL_ID, true));
 	}
 
-	public isSupported(): boolean {
-		const selection = this.editor.getSelection();
-		return !!selection && !selection.isEmpty() && this.debugService.state === debug.State.Stopped;
-	}
-
 	public getGroupId(): string {
 		return '5_debug/2_selection_to_repl';
 	}
 
 	public shouldShowInContextMenu(): boolean {
-		return this.isSupported();
+		const selection = this.editor.getSelection();
+		return !!selection && !selection.isEmpty() && this.debugService.state === debug.State.Stopped;
 	}
 }
 

@@ -13,7 +13,7 @@ import {ipcRenderer as ipc, remote} from 'electron';
 
 const windowId = remote.getCurrentWindow().id;
 
-export const IWindowService = createDecorator<IWindowService>('windowService');
+export var IWindowService = createDecorator<IWindowService>('windowService');
 
 export interface IWindowServices {
 	windowService?: IWindowService;

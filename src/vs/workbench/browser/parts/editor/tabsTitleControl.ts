@@ -7,15 +7,19 @@
 
 import 'vs/css!./media/tabstitle';
 import nls = require('vs/nls');
+import {IAction} from 'vs/base/common/actions';
+import {prepareActions} from 'vs/workbench/browser/actionBarRegistry';
+import arrays = require('vs/base/common/arrays');
 import errors = require('vs/base/common/errors');
 import DOM = require('vs/base/browser/dom');
 import {isMacintosh} from 'vs/base/common/platform';
 import {MIME_BINARY} from 'vs/base/common/mime';
 import {Position} from 'vs/platform/editor/common/editor';
 import {IEditorGroup, IEditorIdentifier, asFileEditorInput} from 'vs/workbench/common/editor';
+import {ToolBar} from 'vs/base/browser/ui/toolbar/toolbar';
 import {StandardKeyboardEvent} from 'vs/base/browser/keyboardEvent';
 import {CommonKeybindings as Kb, KeyCode} from 'vs/base/common/keyCodes';
-import {ActionBar} from 'vs/base/browser/ui/actionbar/actionbar';
+import {ActionBar, Separator} from 'vs/base/browser/ui/actionbar/actionbar';
 import {IConfigurationService} from 'vs/platform/configuration/common/configuration';
 import {IWorkbenchEditorService} from 'vs/workbench/services/editor/common/editorService';
 import {IContextMenuService} from 'vs/platform/contextview/browser/contextView';
@@ -38,7 +42,12 @@ export class TabsTitleControl extends TitleControl {
 	private tabsContainer: HTMLElement;
 	private activeTab: HTMLElement;
 	private scrollbar: ScrollableElement;
+
+	private groupActionsToolbar: ToolBar;
 	private tabDisposeables: IDisposable[] = [];
+
+	private currentPrimaryGroupActionIds: string[] = [];
+	private currentSecondaryGroupActionIds: string[] = [];
 
 	constructor(
 		@IContextMenuService contextMenuService: IContextMenuService,
@@ -55,13 +64,16 @@ export class TabsTitleControl extends TitleControl {
 	) {
 		super(contextMenuService, instantiationService, configurationService, editorService, editorGroupService, keybindingService, telemetryService, messageService, menuService, quickOpenService);
 
+		this.currentPrimaryGroupActionIds = [];
+		this.currentSecondaryGroupActionIds = [];
+
 		this.tabDisposeables = [];
 	}
 
 	public setContext(group: IEditorGroup): void {
 		super.setContext(group);
 
-		this.editorActionsToolbar.context = { group };
+		this.groupActionsToolbar.context = { group };
 	}
 
 	public create(parent: HTMLElement): void {
@@ -148,13 +160,11 @@ export class TabsTitleControl extends TitleControl {
 			}
 		}));
 
-		// Editor Actions Container
-		const editorActionsContainer = document.createElement('div');
-		DOM.addClass(editorActionsContainer, 'editor-actions');
-		this.titleContainer.appendChild(editorActionsContainer);
-
-		// Editor Actions Toolbar
-		this.createEditorActionsToolBar(editorActionsContainer);
+		// Group Actions
+		const groupActionsContainer = document.createElement('div');
+		DOM.addClass(groupActionsContainer, 'group-actions');
+		this.titleContainer.appendChild(groupActionsContainer);
+		this.groupActionsToolbar = this.doCreateToolbar(groupActionsContainer);
 	}
 
 	public allowDragging(element: HTMLElement): boolean {
@@ -210,8 +220,18 @@ export class TabsTitleControl extends TitleControl {
 			}
 		});
 
-		// Update Editor Actions Toolbar
-		this.updateEditorActionsToolbar();
+		// Update Group Actions Toolbar
+		const groupActions = this.getGroupActions(group);
+		const primaryGroupActions = groupActions.primary;
+		const secondaryGroupActions = groupActions.secondary;
+		const primaryGroupActionIds = primaryGroupActions.map(a => a.id);
+		const secondaryGroupActionIds = secondaryGroupActions.map(a => a.id);
+
+		if (!arrays.equals(primaryGroupActionIds, this.currentPrimaryGroupActionIds) || !arrays.equals(secondaryGroupActionIds, this.currentSecondaryGroupActionIds)) {
+			this.groupActionsToolbar.setActions(primaryGroupActions, secondaryGroupActions)();
+			this.currentPrimaryGroupActionIds = primaryGroupActionIds;
+			this.currentSecondaryGroupActionIds = secondaryGroupActionIds;
+		}
 
 		// Ensure the active tab is always revealed
 		this.layout();
@@ -223,7 +243,10 @@ export class TabsTitleControl extends TitleControl {
 		if (!editor) {
 			this.clearTabs();
 
-			this.clearEditorActionsToolbar();
+			this.groupActionsToolbar.setActions([], [])();
+
+			this.currentPrimaryGroupActionIds = [];
+			this.currentSecondaryGroupActionIds = [];
 
 			return; // return early if we are being closed
 		}
@@ -323,6 +346,10 @@ export class TabsTitleControl extends TitleControl {
 				scrollLeft: this.activeTab.offsetLeft
 			});
 		}
+
+		// Update enablement of certain actions that depend on overflow
+		const isOverflowing = (totalContainerWidth > visibleContainerWidth);
+		this.showEditorsInGroupAction.enabled = isOverflowing;
 	}
 
 	private hookTabListeners(tab: HTMLElement, identifier: IEditorIdentifier): void {
@@ -503,5 +530,31 @@ export class TabsTitleControl extends TitleControl {
 		const isCopy = (e.ctrlKey && !isMacintosh) || (e.altKey && isMacintosh);
 
 		return !isCopy || source.id === target.id;
+	}
+
+	protected getContextMenuActions(identifier: IEditorIdentifier): IAction[] {
+		const actions = super.getContextMenuActions(identifier);
+		const {editor, group} = identifier;
+
+		// Actions: For active editor
+		if (group.isActive(editor)) {
+			const editorActions = this.getEditorActions(identifier);
+			if (editorActions.primary.length) {
+				actions.push(new Separator(), ...prepareActions(editorActions.primary));
+			}
+
+			if (editorActions.secondary.length) {
+				actions.push(new Separator(), ...prepareActions(editorActions.secondary));
+			}
+		}
+
+		return actions;
+	}
+
+	public dispose(): void {
+		super.dispose();
+
+		// Toolbar
+		this.groupActionsToolbar.dispose();
 	}
 }

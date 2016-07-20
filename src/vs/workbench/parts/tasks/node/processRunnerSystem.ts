@@ -18,7 +18,7 @@ import { TerminateResponse, SuccessData, ErrorData } from 'vs/base/common/proces
 import { LineProcess, LineData } from 'vs/base/node/processes';
 
 import { IOutputService, IOutputChannel } from 'vs/workbench/parts/output/common/output';
-import { ISystemVariables } from 'vs/base/common/parsers';
+import { SystemVariables } from 'vs/workbench/parts/lib/node/systemVariables';
 
 import { IMarkerService } from 'vs/platform/markers/common/markers';
 import { ValidationStatus } from 'vs/base/common/parsers';
@@ -37,7 +37,7 @@ export class ProcessRunnerSystem extends EventEmitter implements ITaskSystem {
 	public static TelemetryEventName: string = 'taskService';
 
 	private fileConfig: FileConfig.ExternalTaskRunnerConfiguration;
-	private variables: ISystemVariables;
+	private variables: SystemVariables;
 	private markerService: IMarkerService;
 	private modelService: IModelService;
 	private outputService: IOutputService;
@@ -53,7 +53,7 @@ export class ProcessRunnerSystem extends EventEmitter implements ITaskSystem {
 	private childProcess: LineProcess;
 	private activeTaskIdentifier: string;
 
-	constructor(fileConfig:FileConfig.ExternalTaskRunnerConfiguration, variables:ISystemVariables, markerService:IMarkerService, modelService: IModelService, telemetryService: ITelemetryService, outputService:IOutputService, outputChannelId:string, clearOutput: boolean = true) {
+	constructor(fileConfig:FileConfig.ExternalTaskRunnerConfiguration, variables:SystemVariables, markerService:IMarkerService, modelService: IModelService, telemetryService: ITelemetryService, outputService:IOutputService, outputChannelId:string, clearOutput: boolean = true) {
 		super();
 		this.fileConfig = fileConfig;
 		this.variables = variables;
@@ -388,7 +388,15 @@ export class ProcessRunnerSystem extends EventEmitter implements ITaskSystem {
 	}
 
 	private resolveVariable(value: string): string {
-		return this.variables.resolve(value);
+		let regexp =/\$\{(.*?)\}/g;
+		return value.replace(regexp, (match:string, name:string) => {
+			let value = (<any>this.variables)[name];
+			if (value) {
+				return value;
+			} else {
+				return match;
+			}
+		});
 	}
 
 	public log(value: string): void  {

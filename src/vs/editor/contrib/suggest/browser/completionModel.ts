@@ -11,7 +11,7 @@ import {TPromise} from 'vs/base/common/winjs.base';
 import {IReadOnlyModel} from 'vs/editor/common/editorCommon';
 import {IFilter, IMatch, fuzzyContiguousFilter} from 'vs/base/common/filters';
 import {ISuggestResult, ISuggestSupport, ISuggestion} from 'vs/editor/common/modes';
-import {ISuggestionItem} from './suggest';
+import {ISuggestResult2} from '../common/suggest';
 import {asWinJsPromise} from 'vs/base/common/async';
 import {Position} from 'vs/editor/common/core/position';
 
@@ -24,11 +24,11 @@ export class CompletionItem {
 
 	private _support: ISuggestSupport;
 
-	constructor(item: ISuggestionItem) {
-		this.suggestion = item.suggestion;
-		this.container = item.container;
-		this.filter = item.support && item.support.filter || fuzzyContiguousFilter;
-		this._support = item.support;
+	constructor(suggestion: ISuggestion, container: ISuggestResult2) {
+		this._support = container.support;
+		this.suggestion = suggestion;
+		this.container = container;
+		this.filter = container.support && container.support.filter || fuzzyContiguousFilter;
 	}
 
 	resolveDetails(model:IReadOnlyModel, position:Position): TPromise<ISuggestion> {
@@ -44,6 +44,24 @@ export class CompletionItem {
 	updateDetails(value: ISuggestion): void {
 		this.suggestion = assign(this.suggestion, value);
 	}
+
+	static compare(item: CompletionItem, otherItem: CompletionItem): number {
+		const suggestion = item.suggestion;
+		const otherSuggestion = otherItem.suggestion;
+
+		if (typeof suggestion.sortText === 'string' && typeof otherSuggestion.sortText === 'string') {
+			const one = suggestion.sortText.toLowerCase();
+			const other = otherSuggestion.sortText.toLowerCase();
+
+			if (one < other) {
+				return -1;
+			} else if (one > other) {
+				return 1;
+			}
+		}
+
+		return suggestion.label.toLowerCase() < otherSuggestion.label.toLowerCase() ? -1 : 1;
+	}
 }
 
 export class LineContext {
@@ -53,18 +71,18 @@ export class LineContext {
 
 export class CompletionModel {
 
-	public raw: ISuggestionItem[];
-
 	private _lineContext: LineContext;
 	private _items: CompletionItem[] = [];
 	private _filteredItems: CompletionItem[] = undefined;
 
-	constructor(raw: ISuggestionItem[], leadingLineContent: string) {
-		this.raw = raw;
+	constructor(public raw: ISuggestResult2[], leadingLineContent:string) {
 		this._lineContext = { leadingLineContent, characterCountDelta: 0 };
-		for (const item of raw) {
-			this._items.push(new CompletionItem(item));
+		for (let container of raw) {
+			for (let suggestion of container.suggestions) {
+				this._items.push(new CompletionItem(suggestion, container));
+			}
 		}
+		this._items.sort(CompletionItem.compare);
 	}
 
 	get lineContext(): LineContext {

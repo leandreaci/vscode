@@ -9,6 +9,7 @@ import 'vs/css!./media/searchviewlet';
 import nls = require('vs/nls');
 import {TPromise} from 'vs/base/common/winjs.base';
 import {EditorType} from 'vs/editor/common/editorCommon';
+import {IDiffEditor} from 'vs/editor/browser/editorBrowser';
 import lifecycle = require('vs/base/common/lifecycle');
 import errors = require('vs/base/common/errors');
 import aria = require('vs/base/browser/ui/aria/aria');
@@ -289,7 +290,7 @@ export class SearchViewlet extends Viewlet {
 
 		this.toUnbind.push(this.searchWidget.onReplaceToggled(() => this.onReplaceToggled()));
 		this.toUnbind.push(this.searchWidget.onReplaceStateChange((state) => {
-			this.viewModel.replaceActive= state;
+			this.viewModel.replaceString= this.searchWidget.getReplaceValue();
 			this.tree.refresh();
 		}));
 		this.toUnbind.push(this.searchWidget.onReplaceValueChanged((value) => {
@@ -422,7 +423,7 @@ export class SearchViewlet extends Viewlet {
 				}
 
 				let sideBySide = (originalEvent && (originalEvent.ctrlKey || originalEvent.metaKey));
-				let focusEditor = (keyboard && (<KeyboardEvent>originalEvent).keyCode === KeyCode.Enter) || doubleClick;
+				let focusEditor = keyboard || doubleClick;
 
 				this.onFocus(element, !focusEditor, sideBySide, doubleClick);
 			}));
@@ -901,7 +902,7 @@ export class SearchViewlet extends Viewlet {
 
 		this.telemetryService.publicLog('searchResultChosen');
 
-		return (this.viewModel.isReplaceActive() && !!this.viewModel.replaceString) ? this.replaceService.openReplacePreviewEditor(lineMatch, preserveFocus, sideBySide, pinned) : this.open(lineMatch, preserveFocus, sideBySide, pinned);
+		return this.viewModel.hasReplaceString() ? this.openReplacePreviewEditor(lineMatch, preserveFocus, sideBySide, pinned) : this.open(lineMatch, preserveFocus, sideBySide, pinned);
 	}
 
 	public open(element: FileMatchOrMatch, preserveFocus?: boolean, sideBySide?: boolean, pinned?: boolean): TPromise<any> {
@@ -912,10 +913,21 @@ export class SearchViewlet extends Viewlet {
 			options: {
 				preserveFocus,
 				pinned,
-				selection,
-				revealIfVisible: true
+				selection
 			}
 		}, sideBySide);
+	}
+
+	private openReplacePreviewEditor(element: FileMatchOrMatch, preserveFocus?: boolean, sideBySide?: boolean, pinned?: boolean): TPromise<any> {
+		this.telemetryService.publicLog('replace.open.previewEditor');
+		return this.replaceService.getInput(element instanceof Match ? element.parent() : element).then((editorInput) => {
+			this.editorService.openEditor(editorInput, {preserveFocus: preserveFocus, pinned}).then((editor) => {
+				let editorControl= (<IDiffEditor>editor.getControl());
+				if (element instanceof Match) {
+					editorControl.revealLineInCenter(element.range().startLineNumber);
+				}
+			}, errors.onUnexpectedError);
+		}, errors.onUnexpectedError);
 	}
 
 	private getSelectionFrom(element: FileMatchOrMatch): any {

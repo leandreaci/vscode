@@ -12,7 +12,7 @@ import {TPromise} from 'vs/base/common/winjs.base';
 import {ICommonCodeEditor, ICursorSelectionChangedEvent, CursorChangeReason, IModel, IPosition} from 'vs/editor/common/editorCommon';
 import {ISuggestSupport, ISuggestion, SuggestRegistry} from 'vs/editor/common/modes';
 import {CodeSnippet} from 'vs/editor/contrib/snippet/common/snippet';
-import {ISuggestionItem, provideSuggestionItems} from './suggest';
+import {ISuggestResult2, provideCompletionItems} from '../common/suggest';
 import {CompletionModel} from './completionModel';
 import {Position} from 'vs/editor/common/core/position';
 
@@ -168,7 +168,7 @@ export class SuggestModel implements IDisposable {
 	private requestPromise: TPromise<void>;
 	private context: Context;
 
-	private raw: ISuggestionItem[];
+	private raw: ISuggestResult2[];
 	private completionModel: CompletionModel;
 	private incomplete: boolean;
 
@@ -330,7 +330,7 @@ export class SuggestModel implements IDisposable {
 
 		const position = this.editor.getPosition();
 
-		this.requestPromise = provideSuggestionItems(model, position, { groups, snippetConfig: this.editor.getConfiguration().contribInfo.snippetSuggestions }).then(all => {
+		this.requestPromise = provideCompletionItems(model, position, groups).then(all => {
 			this.requestPromise = null;
 
 			if (this.state === State.Idle) {
@@ -338,7 +338,7 @@ export class SuggestModel implements IDisposable {
 			}
 
 			this.raw = all;
-			this.incomplete = all.some(result => result.container.incomplete);
+			this.incomplete = all.some(result => result.incomplete);
 
 			const model = this.editor.getModel();
 

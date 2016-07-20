@@ -19,7 +19,7 @@ function onStart() {
 	}
 
 	startTime = new Date().getTime();
-	util.log(`Starting ${ util.colors.green('compilation') }...`);
+	util.log(util.colors.green('Starting compilation'));
 }
 
 function onEnd() {
@@ -27,23 +27,23 @@ function onEnd() {
 		return ;
 	}
 
-	const errors = _.flatten(allErrors);
+	var errors = _.flatten(allErrors);
 	errors.map(err => util.log(`${ util.colors.red('Error') }: ${ err }`));
 
-	util.log(`Finished ${ util.colors.green('compilation') } with ${ errors.length } errors after ${ util.colors.magenta((new Date().getTime() - startTime) + ' ms') }`);
+	util.log(`${ util.colors.green('Finished compilation') } with ${ util.colors.red(errors.length + ' errors') } in ${ util.colors.blue((new Date().getTime() - startTime) + 'ms') }.`);
 }
 
-module.exports = () => {
-	const errors = [];
+module.exports = function () {
+	var errors = [];
 	allErrors.push(errors);
 
-	const result = err => errors.push(err);
-	result.hasErrors = () => errors.length > 0;
+	var result = function (err) {
+		errors.push(err);
+	};
 
-	result.end = emitError => {
+	result.end = function (emitError) {
 		errors.length = 0;
 		onStart();
-
 		return es.through(null, function () {
 			onEnd();
 
@@ -54,6 +54,10 @@ module.exports = () => {
 			}
 		});
 	};
+
+	result.hasErrors = function() {
+		return errors.length > 0;
+	}
 
 	return result;
 };

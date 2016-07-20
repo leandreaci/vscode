@@ -121,7 +121,7 @@ class ModelMarkerHandler {
 		let className: string;
 		let color: string;
 		let darkColor: string;
-		let hoverMessage: MarkedString[] = null;
+		let htmlMessage: MarkedString[] = null;
 
 		switch (marker.severity) {
 			case Severity.Ignore:
@@ -142,21 +142,21 @@ class ModelMarkerHandler {
 		}
 
 		if (typeof marker.message === 'string') {
-			hoverMessage = [ textToMarkedString(marker.message) ];
+			htmlMessage = [ textToMarkedString(marker.message) ];
 		} else if (Array.isArray(marker.message)) {
-			hoverMessage = <MarkedString[]><any>marker.message;
+			htmlMessage = <MarkedString[]><any>marker.message;
 		} else if (marker.message) {
-			hoverMessage = [ marker.message ];
+			htmlMessage = [ marker.message ];
 		}
 
-		if (hoverMessage && marker.source) {
-			hoverMessage.unshift(`[${marker.source}] `);
+		if (htmlMessage && marker.source) {
+			htmlMessage.unshift(`[${marker.source}] `);
 		}
 
 		return {
 			stickiness: editorCommon.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
 			className,
-			hoverMessage,
+			hoverMessage: htmlMessage,
 			overviewRuler: {
 				color,
 				darkColor,

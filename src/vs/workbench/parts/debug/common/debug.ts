@@ -237,10 +237,6 @@ export interface IRawAdapter extends IRawEnvAdapter {
 	linux?: IRawEnvAdapter;
 }
 
-export interface IRawBreakpointContribution {
-	language: string;
-}
-
 export interface IRawDebugSession {
 	configuration: { type: string, isAttach: boolean, capabilities: DebugProtocol.Capabilites };
 
@@ -269,7 +265,7 @@ export interface IConfigurationManager {
 	onDidConfigurationChange: Event<string>;
 }
 
-export const IDebugService = createDecorator<IDebugService>(DEBUG_SERVICE_ID);
+export var IDebugService = createDecorator<IDebugService>(DEBUG_SERVICE_ID);
 
 export interface IDebugService {
 	_serviceBrand: any;

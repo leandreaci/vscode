@@ -40,9 +40,9 @@ export interface IExtension {
 	outdated: boolean;
 }
 
-export const SERVICE_ID = 'extensionsWorkbenchService';
+export var SERVICE_ID = 'extensionsWorkbenchService';
 
-export const IExtensionsWorkbenchService = createDecorator<IExtensionsWorkbenchService>(SERVICE_ID);
+export var IExtensionsWorkbenchService = createDecorator<IExtensionsWorkbenchService>(SERVICE_ID);
 
 export interface IExtensionsWorkbenchService {
 	_serviceBrand: any;

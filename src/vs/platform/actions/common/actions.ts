@@ -31,8 +31,7 @@ export interface IMenuItem {
 	command: ICommandAction;
 	alt?: ICommandAction;
 	when?: KbExpr;
-	group?: 'navigation' | string;
-	order?: number;
+	group?: string;
 }
 
 export enum MenuId {
@@ -84,7 +83,6 @@ export const MenuRegistry: IMenuRegistry = new class {
 			array.push(items);
 		}
 	}
-
 	getMenuItems(loc: MenuId): IMenuItem[] {
 		return this.menuItems[loc] || [];
 	}

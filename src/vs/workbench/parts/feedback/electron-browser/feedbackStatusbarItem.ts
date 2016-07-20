@@ -24,9 +24,8 @@ class TwitterFeedbackService implements IFeedbackService {
 	}
 
 	public submitFeedback(feedback: IFeedback): void {
-		const queryString = `?${feedback.sentiment === 1 ? `hashtags=${this.combineHashTagsAsString()}&` : null}ref_src=twsrc%5Etfw&related=twitterapi%2Ctwitter&text=${feedback.feedback}&tw_p=tweetbutton&via=${TwitterFeedbackService.VIA_NAME}`;
-		const url = TwitterFeedbackService.TWITTER_URL + queryString;
-
+		var queryString = `?${feedback.sentiment === 1 ? `hashtags=${this.combineHashTagsAsString()}&` : null}ref_src=twsrc%5Etfw&related=twitterapi%2Ctwitter&text=${feedback.feedback}&tw_p=tweetbutton&via=${TwitterFeedbackService.VIA_NAME}`;
+		var url = TwitterFeedbackService.TWITTER_URL + queryString;
 		shell.openExternal(url);
 	}
 

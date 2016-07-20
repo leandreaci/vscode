@@ -3,39 +3,46 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
+var es = require('event-stream');
+var debounce = require('debounce');
+var filter = require('gulp-filter');
+var azure = require('gulp-azure-storage');
+var rename = require('gulp-rename');
+var vzip = require('gulp-vinyl-zip');
+var util = require('gulp-util');
+var _ = require('underscore');
+var path = require('path');
+var fs = require('fs');
+var rimraf = require('rimraf');
+var git = require('./git');
 
-const es = require('event-stream');
-const debounce = require('debounce');
-const filter = require('gulp-filter');
-const azure = require('gulp-azure-storage');
-const rename = require('gulp-rename');
-const vzip = require('gulp-vinyl-zip');
-const util = require('gulp-util');
-const _ = require('underscore');
-const path = require('path');
-const fs = require('fs');
-const rimraf = require('rimraf');
-const git = require('./git');
+var NoCancellationToken = {
+	isCancellationRequested: function () {
+		return false;
+	}
+};
 
-const NoCancellationToken = { isCancellationRequested: () => false };
+exports.incremental = function (streamProvider, initial, supportsCancellation) {
+	var state = 'idle';
+	var input = es.through();
+	var output = es.through();
+	var buffer = Object.create(null);
 
-exports.incremental = (streamProvider, initial, supportsCancellation) => {
-	const input = es.through();
-	const output = es.through();
-	let state = 'idle';
-	let buffer = Object.create(null);
+	var token = !supportsCancellation ? null : {
+		isCancellationRequested: function () {
+			// console.log('isCancellationRequested', Object.keys(buffer).length, new Date());
+			return Object.keys(buffer).length > 0;
+		}
+	};
 
-	const token = !supportsCancellation ? null : { isCancellationRequested: () => Object.keys(buffer).length > 0 };
-
-	const run = (input, isCancellable) => {
+	var run = function (input, isCancellable) {
 		state = 'running';
 
-		const stream = !supportsCancellation ? streamProvider() : streamProvider(isCancellable ? token : NoCancellationToken);
+		var stream = !supportsCancellation ? streamProvider() : streamProvider(isCancellable ? token : NoCancellationToken);
 
 		input
 			.pipe(stream)
-			.pipe(es.through(null, () => {
+			.pipe(es.through(null, function () {
 				state = 'idle';
 				eventuallyRun();
 			}))
@@ -46,19 +53,22 @@ exports.incremental = (streamProvider, initial, supportsCancellation) => {
 		run(initial, false);
 	}
 
-	const eventuallyRun = debounce(() => {
-		const paths = Object.keys(buffer);
+	var eventuallyRun = debounce(function () {
+		var paths = Object.keys(buffer);
 
 		if (paths.length === 0) {
 			return;
 		}
 
-		const data = paths.map(path => buffer[path]);
+		var data = paths.map(function (path) {
+			return buffer[path];
+		});
+
 		buffer = Object.create(null);
 		run(es.readArray(data), true);
 	}, 500);
 
-	input.on('data', f => {
+	input.on('data', function (f) {
 		buffer[f.path] = f;
 
 		if (state === 'idle') {
@@ -69,12 +79,12 @@ exports.incremental = (streamProvider, initial, supportsCancellation) => {
 	return es.duplex(input, output);
 };
 
-exports.fixWin32DirectoryPermissions = () => {
+exports.fixWin32DirectoryPermissions = function () {
 	if (!/win32/.test(process.platform)) {
 		return es.through();
 	}
 
-	return es.mapSync(f => {
+	return es.mapSync(function (f) {
 		if (f.stat && f.stat.isDirectory && f.stat.isDirectory()) {
 			f.stat.mode = 16877;
 		}
@@ -83,8 +93,8 @@ exports.fixWin32DirectoryPermissions = () => {
 	});
 };
 
-exports.setExecutableBit = pattern => {
-	var setBit = es.mapSync(f => {
+exports.setExecutableBit = function (pattern) {
+	var setBit = es.mapSync(function (f) {
 		f.stat.mode = /* 100755 */ 33261;
 		return f;
 	});
@@ -103,30 +113,30 @@ exports.setExecutableBit = pattern => {
 	return es.duplex(input, output);
 };
 
-exports.handleAzureJson = env => {
-	const input = es.through();
-	const azureJsonFilter = filter('**/*.azure.json', { restore: true });
+exports.handleAzureJson = function (env) {
+	var input = es.through();
+	var azureJsonFilter = filter('**/*.azure.json', { restore: true });
 
-	const allOpts = [];
-	const result = es.through();
+	var allOpts = [];
+	var result = es.through();
 
-	const output = input
+	var output = input
 		.pipe(azureJsonFilter)
-		.pipe(es.through(f => {
+		.pipe(es.through(function (f) {
 			util.log('Downloading binaries from Azure:', util.colors.yellow(f.relative), '...');
-			const opts = JSON.parse(f.contents.toString());
+			var opts = JSON.parse(f.contents.toString());
 			opts.prefix = _.template(opts.zip || opts.prefix)(env);
 			opts.output = path.join(path.dirname(f.relative), opts.output);
 			allOpts.push(opts);
 		}, function () {
-			const streams = allOpts.map(opts => {
-				let result = azure.download(_.extend(opts, { buffer: true, quiet: true }));
+			var streams = allOpts.map(function (opts) {
+				var result = azure.download(_.extend(opts, { buffer: true, quiet: true }));
 
 				if (opts.zip) {
 					result = result.pipe(vzip.src());
 				}
 
-				return result.pipe(rename(p => {
+				return result.pipe(rename(function (p) {
 					p.dirname = path.join(opts.output, p.dirname);
 				}));
 			});
@@ -144,8 +154,8 @@ exports.handleAzureJson = env => {
 	return es.duplex(input, es.merge(output, result));
 };
 
-exports.toFileUri = filePath => {
-	const match = filePath.match(/^([a-z])\:(.*)$/i);
+exports.toFileUri = function (filePath) {
+	var match = filePath.match(/^([a-z])\:(.*)$/i);
 
 	if (match) {
 		filePath = '/' + match[1].toUpperCase() + ':' + match[2];
@@ -154,39 +164,38 @@ exports.toFileUri = filePath => {
 	return 'file://' + filePath.replace(/\\/g, '/');
 };
 
-exports.rebase = (base, append) => {
-	return es.mapSync(f => {
+exports.rebase = function (base, append) {
+	return es.mapSync(function (f) {
 		if (append) {
 			f.base = path.join(f.base, base);
 		} else {
 			f.base = base;
 		}
-
 		return f;
 	});
 };
 
-exports.skipDirectories = () => {
-	return es.mapSync(f => {
+exports.skipDirectories = function () {
+	return es.mapSync(function (f) {
 		if (!f.isDirectory()) {
 			return f;
 		}
 	});
 };
 
-exports.cleanNodeModule = (name, excludes, includes) => {
-	const glob = path => '**/node_modules/' + name + (path ? '/' + path : '');
-	const negate = str => '!' + str;
+exports.cleanNodeModule = function (name, excludes, includes) {
+	var glob = function (path) { return '**/node_modules/' + name + (path ? '/' + path : ''); };
+	var negate = function (str) { return '!' + str; };
 
-	const allFilter = filter(glob('**'), { restore: true });
-	const globs = [glob('**')].concat(excludes.map(_.compose(negate, glob)));
+	var allFilter = filter(glob('**'), { restore: true });
+	var globs = [glob('**')].concat(excludes.map(_.compose(negate, glob)));
 
-	const input = es.through();
-	const nodeModuleInput = input.pipe(allFilter);
-	let output = nodeModuleInput.pipe(filter(globs));
+	var input = es.through();
+	var nodeModuleInput = input.pipe(allFilter);
+	var output = nodeModuleInput.pipe(filter(globs));
 
 	if (includes) {
-		const includeGlobs = includes.map(glob);
+		var includeGlobs = includes.map(glob);
 		output = es.merge(output, nodeModuleInput.pipe(filter(includeGlobs)));
 	}
 
@@ -194,11 +203,11 @@ exports.cleanNodeModule = (name, excludes, includes) => {
 	return es.duplex(input, output);
 };
 
-exports.loadSourcemaps = () => {
-	const input = es.through();
+exports.loadSourcemaps = function () {
+	var input = es.through();
 
-	const output = input
-		.pipe(es.map((f, cb) => {
+	var output = input
+		.pipe(es.map(function (f, cb) {
 			if (f.sourceMap) {
 				return cb(null, f);
 			}
@@ -207,10 +216,11 @@ exports.loadSourcemaps = () => {
 				return cb(new Error('empty file'));
 			}
 
-			const contents = f.contents.toString('utf8');
+			var contents = f.contents.toString('utf8');
 
-			const reg = /\/\/# sourceMappingURL=(.*)$/g;
-			let lastMatch = null, match = null;
+			var reg = /\/\/# sourceMappingURL=(.*)$/g;
+			var lastMatch = null;
+			var match = null;
 
 			while (match = reg.exec(contents)) {
 				lastMatch = match;
@@ -230,7 +240,7 @@ exports.loadSourcemaps = () => {
 
 			f.contents = new Buffer(contents.replace(/\/\/# sourceMappingURL=(.*)$/g, ''), 'utf8');
 
-			fs.readFile(path.join(path.dirname(f.path), lastMatch[1]), 'utf8', (err, contents) => {
+			fs.readFile(path.join(path.dirname(f.path), lastMatch[1]), 'utf8', function (err, contents) {
 				if (err) { return cb(err); }
 
 				f.sourceMap = JSON.parse(contents);
@@ -241,22 +251,16 @@ exports.loadSourcemaps = () => {
 	return es.duplex(input, output);
 };
 
-exports.rimraf = dir => {
-	let retries = 0;
-
-	const retry = cb => {
-		rimraf(dir, { maxBusyTries: 1 }, err => {
-			if (!err) return cb();
-			if (err.code === 'ENOTEMPTY' && ++retries < 5) return setTimeout(() => retry(cb), 10);
-			else return cb(err);
-		});
+exports.rimraf = function(dir) {
+	return function (cb) {
+		rimraf(dir, {
+			maxBusyTries: 1
+		}, cb);
 	};
-
-	return cb => retry(cb);
 };
 
-exports.getVersion = root => {
-	let version = process.env['BUILD_SOURCEVERSION'];
+exports.getVersion = function (root) {
+	var version = process.env['BUILD_SOURCEVERSION'];
 
 	if (!version || !/^[0-9a-f]{40}$/i.test(version)) {
 		version = git.getVersion(root);
@@ -265,9 +269,9 @@ exports.getVersion = root => {
 	return version;
 };
 
-exports.rebase = count => {
-	return rename(f => {
-		const parts = f.dirname.split(/[\/\\]/);
+exports.rebase = function (count) {
+	return rename(function (f) {
+		var parts = f.dirname.split(/[\/\\]/);
 		f.dirname = parts.slice(count).join(path.sep);
 	});
 };

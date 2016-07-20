@@ -48,13 +48,11 @@ export class FindModelBoundToEditorModel {
 	private _ignoreModelContentChanged:boolean;
 
 	private _updateDecorationsScheduler:RunOnceScheduler;
-	private _isDisposed: boolean;
 
 	constructor(editor:editorCommon.ICommonCodeEditor, state:FindReplaceState) {
 		this._editor = editor;
 		this._state = state;
 		this._toDispose = [];
-		this._isDisposed = false;
 
 		this._decorations = new FindDecorations(editor);
 		this._toDispose.push(this._decorations);
@@ -91,15 +89,10 @@ export class FindModelBoundToEditorModel {
 	}
 
 	public dispose(): void {
-		this._isDisposed = true;
 		this._toDispose = dispose(this._toDispose);
 	}
 
 	private _onStateChanged(e:FindReplaceStateChangedEvent): void {
-		if (this._isDisposed) {
-			// The find model is disposed during a find state changed event
-			return;
-		}
 		if (e.searchString || e.isReplaceRevealed || e.isRegex || e.wholeWord || e.matchCase || e.searchScope) {
 			if (e.searchScope) {
 				this.research(e.moveCursor, this._state.searchScope);
@@ -140,11 +133,7 @@ export class FindModelBoundToEditorModel {
 		let findMatches = this._findMatches(findScope, MATCHES_LIMIT);
 		this._decorations.set(findMatches, findScope);
 
-		this._state.changeMatchInfo(
-			this._decorations.getCurrentMatchesPosition(this._editor.getSelection()),
-			this._decorations.getCount(),
-			undefined
-		);
+		this._state.changeMatchInfo(this._decorations.getCurrentMatchesPosition(this._editor.getSelection()), this._decorations.getCount());
 
 		if (moveCursor) {
 			this._moveToNextMatch(this._decorations.getStartPosition());
@@ -165,18 +154,6 @@ export class FindModelBoundToEditorModel {
 			return true;
 		}
 		return false;
-	}
-
-	private _setCurrentFindMatch(match:Range): void {
-		let matchesPosition = this._decorations.setCurrentFindMatch(match);
-		this._state.changeMatchInfo(
-			matchesPosition,
-			this._decorations.getCount(),
-			match
-		);
-
-		this._editor.setSelection(match);
-		this._editor.revealRangeInCenterIfOutsideViewport(match);
 	}
 
 	private _moveToPrevMatch(before:Position, isRecursed:boolean = false): void {
@@ -236,7 +213,10 @@ export class FindModelBoundToEditorModel {
 			return this._moveToPrevMatch(prevMatch.getStartPosition(), true);
 		}
 
-		this._setCurrentFindMatch(prevMatch);
+		let matchesPosition = this._decorations.setCurrentFindMatch(prevMatch);
+		this._state.changeMatchInfo(matchesPosition, this._decorations.getCount());
+		this._editor.setSelection(prevMatch);
+		this._editor.revealRangeInCenterIfOutsideViewport(prevMatch);
 	}
 
 	public moveToPrevMatch(): void {
@@ -300,7 +280,10 @@ export class FindModelBoundToEditorModel {
 			return this._moveToNextMatch(nextMatch.getEndPosition(), true);
 		}
 
-		this._setCurrentFindMatch(nextMatch);
+		let matchesPosition = this._decorations.setCurrentFindMatch(nextMatch);
+		this._state.changeMatchInfo(matchesPosition, this._decorations.getCount());
+		this._editor.setSelection(nextMatch);
+		this._editor.revealRangeInCenterIfOutsideViewport(nextMatch);
 	}
 
 	public moveToNextMatch(): void {

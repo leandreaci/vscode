@@ -17,7 +17,7 @@ import {IUntitledEditorService} from 'vs/workbench/services/untitled/common/unti
 import {IModelService} from 'vs/editor/common/services/modelService';
 import {IWorkspaceContextService} from 'vs/platform/workspace/common/workspace';
 import {IConfigurationService} from 'vs/platform/configuration/common/configuration';
-import {IRawSearch, ISerializedSearchComplete, ISerializedSearchProgressItem, ISerializedFileMatch, IRawSearchService} from './search';
+import {IRawSearch, ISerializedSearchComplete, ISerializedSearchProgressItem, IRawSearchService} from './search';
 import {ISearchChannel, SearchChannelClient} from './searchIpc';
 
 export class SearchService implements ISearchService {
@@ -187,7 +187,7 @@ export class SearchService implements ISearchService {
 	}
 }
 
-export class DiskSearch {
+class DiskSearch {
 
 	private raw: IRawSearchService;
 
@@ -211,6 +211,7 @@ export class DiskSearch {
 	}
 
 	public search(query: ISearchQuery): PPromise<ISearchComplete, ISearchProgressItem> {
+		let result: IFileMatch[] = [];
 		let request: PPromise<ISerializedSearchComplete, ISerializedSearchProgressItem>;
 
 		let rawSearch: IRawSearch = {
@@ -233,11 +234,6 @@ export class DiskSearch {
 			request = this.raw.textSearch(rawSearch);
 		}
 
-		return DiskSearch.collectResults(request);
-	}
-
-	public static collectResults(request: PPromise<ISerializedSearchComplete, ISerializedSearchProgressItem>): PPromise<ISearchComplete, ISearchProgressItem> {
-		let result: IFileMatch[] = [];
 		return new PPromise<ISearchComplete, ISearchProgressItem>((c, e, p) => {
 			request.done((complete) => {
 				c({
@@ -246,17 +242,17 @@ export class DiskSearch {
 				});
 			}, e, (data) => {
 
-				// Matches
-				if (Array.isArray(data)) {
-					const fileMatches = data.map(d => this.createFileMatch(d));
-					result = result.concat(fileMatches);
-					fileMatches.forEach(p);
-				}
-
 				// Match
-				else if ((<ISerializedFileMatch>data).path) {
-					const fileMatch = this.createFileMatch(data);
+				if (data.path) {
+					let fileMatch = new FileMatch(uri.file(data.path));
 					result.push(fileMatch);
+
+					if (data.lineMatches) {
+						for (let j = 0; j < data.lineMatches.length; j++) {
+							fileMatch.lineMatches.push(new LineMatch(data.lineMatches[j].preview, data.lineMatches[j].lineNumber, data.lineMatches[j].offsetAndLengths));
+						}
+					}
+
 					p(fileMatch);
 				}
 
@@ -266,15 +262,5 @@ export class DiskSearch {
 				}
 			});
 		}, () => request.cancel());
-	}
-
-	private static createFileMatch(data: ISerializedFileMatch): FileMatch {
-		let fileMatch = new FileMatch(uri.file(data.path));
-		if (data.lineMatches) {
-			for (let j = 0; j < data.lineMatches.length; j++) {
-				fileMatch.lineMatches.push(new LineMatch(data.lineMatches[j].preview, data.lineMatches[j].lineNumber, data.lineMatches[j].offsetAndLengths));
-			}
-		}
-		return fileMatch;
 	}
 }

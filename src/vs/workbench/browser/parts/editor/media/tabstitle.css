@@ -36,7 +36,6 @@
 
 .monaco-workbench > .part.editor > .content > .one-editor-silo > .container > .title.tabs > .monaco-scrollable-element .scrollbar {
 	z-index: 3; /* on top of tabs */
-	cursor: default;
 }
 
 /* Tabs Container */
@@ -205,9 +204,9 @@
 	background: url('close-inverse.svg') center center no-repeat;
 }
 
-/* Editor Actions */
+/* Group Actions */
 
-.monaco-workbench > .part.editor > .content > .one-editor-silo > .container > .title .editor-actions {
+.monaco-workbench > .part.editor > .content > .one-editor-silo > .container > .title .group-actions {
 	flex: initial;
 	padding-left: 4px;
 }

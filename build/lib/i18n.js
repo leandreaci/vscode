@@ -14,7 +14,7 @@ function log(message) {
     for (var _i = 1; _i < arguments.length; _i++) {
         rest[_i - 1] = arguments[_i];
     }
-    util.log.apply(util, [util.colors.green('[i18n]'), message].concat(rest));
+    util.log.apply(util, [util.colors.cyan('[i18n]'), message].concat(rest));
 }
 var LocalizeInfo;
 (function (LocalizeInfo) {
@@ -187,9 +187,7 @@ function processCoreBundleFormat(fileHeader, json, emitter) {
         if (!language.iso639_2) {
             return;
         }
-        if (process.env['VSCODE_BUILD_VERBOSE']) {
-            log("Generating nls bundles for: " + language.iso639_2);
-        }
+        log("Generating nls bundles for: " + language.iso639_2);
         statistics[language.iso639_2] = 0;
         var localizedModules = Object.create(null);
         var cwd = path.join(languageDirectory, language.name, 'src');
@@ -202,9 +200,7 @@ function processCoreBundleFormat(fileHeader, json, emitter) {
                 messages = JSON.parse(content);
             }
             else {
-                if (process.env['VSCODE_BUILD_VERBOSE']) {
-                    log("No localized messages found for module " + module + ". Using default messages.");
-                }
+                // log(`No localized messages found for module ${module}. Using default messages.`);
                 messages = defaultMessages[module];
                 statistics[language.iso639_2] = statistics[language.iso639_2] + Object.keys(messages).length;
             }
@@ -219,9 +215,7 @@ function processCoreBundleFormat(fileHeader, json, emitter) {
                 }
                 var message = messages[key];
                 if (!message) {
-                    if (process.env['VSCODE_BUILD_VERBOSE']) {
-                        log("No localized message found for key " + key + " in module " + module + ". Using default message.");
-                    }
+                    log("No localized message found for key " + key + " in module " + module + ". Using default message.");
                     message = defaultMessages[module][key];
                     statistics[language.iso639_2] = statistics[language.iso639_2] + 1;
                 }
@@ -251,9 +245,10 @@ function processCoreBundleFormat(fileHeader, json, emitter) {
             emitter.emit('data', new File({ path: bundle + '.nls.' + language.iso639_2 + '.js', contents: new Buffer(contents.join('\n'), 'utf-8') }));
         });
     });
+    log("Statistics (total " + total + "):");
     Object.keys(statistics).forEach(function (key) {
         var value = statistics[key];
-        log(key + " has " + value + " untranslated strings.");
+        log("\t" + value + " untranslated strings for locale " + key + " found.");
     });
     vscodeLanguages.forEach(function (language) {
         var iso639_2 = iso639_3_to_2[language];

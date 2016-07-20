@@ -292,7 +292,7 @@ export class ExtHostDocumentData extends MirrorModel2 {
 			resultLines: string[] = [];
 
 		resultLines.push(this._lines[startLineIndex].substring(range.start.character));
-		for (let i = startLineIndex + 1; i < endLineIndex; i++) {
+		for (var i = startLineIndex + 1; i < endLineIndex; i++) {
 			resultLines.push(this._lines[i]);
 		}
 		resultLines.push(this._lines[endLineIndex].substring(0, range.end.character));

@@ -1243,10 +1243,6 @@ declare module monaco.editor {
          */
         acceptSuggestionOnEnter?: boolean;
         /**
-         * Enable snippet suggestions. Default to 'true'.
-         */
-        snippetSuggestions?: 'top' | 'bottom' | 'inline' | 'none';
-        /**
          * Enable selection highlight.
          * Defaults to true.
          */
@@ -1408,7 +1404,6 @@ declare module monaco.editor {
         formatOnType: boolean;
         suggestOnTriggerCharacters: boolean;
         acceptSuggestionOnEnter: boolean;
-        snippetSuggestions: 'top' | 'bottom' | 'inline' | 'none';
         selectionHighlight: boolean;
         referenceInfos: boolean;
         folding: boolean;
@@ -3190,7 +3185,7 @@ declare module monaco.editor {
     };
 
     /**
-     * Positions in the view for cursor move command.
+     * Logical positions in the view for cursor move command.
      */
     export const CursorMoveViewPosition: {
         LineStart: string;
@@ -3198,20 +3193,7 @@ declare module monaco.editor {
         LineColumnCenter: string;
         LineEnd: string;
         LineLastNonWhitespaceCharacter: string;
-        LineUp: string;
-        LineDown: string;
     };
-
-    /**
-     * Arguments for Cursor move command
-     */
-    export interface CursorMoveArguments {
-        to: string;
-        inSelectionMode?: boolean;
-        noOfLines?: number;
-        isPaged?: boolean;
-        pageSize?: number;
-    }
 
     /**
      * Built-in commands.
@@ -3270,8 +3252,6 @@ declare module monaco.editor {
         JumpToBracket: string;
         Type: string;
         ReplacePreviousChar: string;
-        CompositionStart: string;
-        CompositionEnd: string;
         Paste: string;
         Tab: string;
         Indent: string;

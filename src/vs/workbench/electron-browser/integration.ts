@@ -156,7 +156,7 @@ export class ElectronIntegration {
 						getAnchor: () => target,
 						getActions: () => TPromise.as(TextInputActions),
 						getKeyBinding: (action) => {
-							const opts = this.keybindingService.lookupKeybindings(action.id);
+							var opts = this.keybindingService.lookupKeybindings(action.id);
 							if (opts.length > 0) {
 								return opts[0]; // only take the first one
 							}

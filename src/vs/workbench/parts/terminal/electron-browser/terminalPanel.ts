@@ -4,29 +4,25 @@
  *--------------------------------------------------------------------------------------------*/
 
 import DOM = require('vs/base/browser/dom');
+import {getBaseThemeId} from 'vs/platform/theme/common/themes';
 import lifecycle = require('vs/base/common/lifecycle');
-import nls = require('vs/nls');
 import platform = require('vs/base/common/platform');
 import {Action, IAction} from 'vs/base/common/actions';
 import {Builder, Dimension} from 'vs/base/browser/builder';
-import {getBaseThemeId} from 'vs/platform/theme/common/themes';
+import {KillTerminalAction, CreateNewTerminalAction, SwitchTerminalInstanceAction, SwitchTerminalInstanceActionItem} from 'vs/workbench/parts/terminal/electron-browser/terminalActions';
 import {IActionItem} from 'vs/base/browser/ui/actionbar/actionbar';
 import {IConfigurationService} from 'vs/platform/configuration/common/configuration';
-import {IContextMenuService} from 'vs/platform/contextview/browser/contextView';
+import {IKeybindingContextKey} from 'vs/platform/keybinding/common/keybinding';
 import {IInstantiationService} from 'vs/platform/instantiation/common/instantiation';
-import {IKeybindingService, IKeybindingContextKey} from 'vs/platform/keybinding/common/keybinding';
 import {IMessageService} from 'vs/platform/message/common/message';
 import {ITelemetryService} from 'vs/platform/telemetry/common/telemetry';
-import {ITerminalFont, TerminalConfigHelper} from 'vs/workbench/parts/terminal/electron-browser/terminalConfigHelper';
 import {ITerminalProcess, ITerminalService, TERMINAL_PANEL_ID} from 'vs/workbench/parts/terminal/electron-browser/terminal';
 import {IThemeService} from 'vs/workbench/services/themes/common/themeService';
 import {IWorkspaceContextService} from 'vs/platform/workspace/common/workspace';
-import {KillTerminalAction, CreateNewTerminalAction, SwitchTerminalInstanceAction, SwitchTerminalInstanceActionItem, CopyTerminalSelectionAction, TerminalPasteAction} from 'vs/workbench/parts/terminal/electron-browser/terminalActions';
 import {Panel} from 'vs/workbench/browser/panel';
-import {Separator} from 'vs/base/browser/ui/actionbar/actionbar';
-import {StandardMouseEvent} from 'vs/base/browser/mouseEvent';
-import {TerminalInstance} from 'vs/workbench/parts/terminal/electron-browser/terminalInstance';
 import {TPromise} from 'vs/base/common/winjs.base';
+import {TerminalConfigHelper} from 'vs/workbench/parts/terminal/electron-browser/terminalConfigHelper';
+import {TerminalInstance} from 'vs/workbench/parts/terminal/electron-browser/terminalInstance';
 
 export class TerminalPanel extends Panel {
 
@@ -34,21 +30,16 @@ export class TerminalPanel extends Panel {
 	private terminalInstances: TerminalInstance[] = [];
 
 	private actions: IAction[];
-	private contextMenuActions: IAction[];
 	private parentDomElement: HTMLElement;
 	private terminalContainer: HTMLElement;
 	private currentBaseThemeId: string;
 	private themeStyleElement: HTMLElement;
-	private fontStyleElement: HTMLElement;
-	private font: ITerminalFont;
 	private configurationHelper: TerminalConfigHelper;
 
 	constructor(
 		@ITelemetryService telemetryService: ITelemetryService,
 		@IConfigurationService private configurationService: IConfigurationService,
-		@IContextMenuService private contextMenuService: IContextMenuService,
 		@IInstantiationService private instantiationService: IInstantiationService,
-		@IKeybindingService private keybindingService: IKeybindingService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@ITerminalService private terminalService: ITerminalService,
 		@IThemeService private themeService: IThemeService,
@@ -74,26 +65,13 @@ export class TerminalPanel extends Panel {
 				this.instantiationService.createInstance(CreateNewTerminalAction, CreateNewTerminalAction.ID, CreateNewTerminalAction.PANEL_LABEL),
 				this.instantiationService.createInstance(KillTerminalAction, KillTerminalAction.ID, KillTerminalAction.PANEL_LABEL)
 			];
+
 			this.actions.forEach(a => {
 				this.toDispose.push(a);
 			});
 		}
-		return this.actions;
-	}
 
-	private getContextMenuActions(): IAction[] {
-		if (!this.contextMenuActions) {
-			this.contextMenuActions = [
-				this.instantiationService.createInstance(CreateNewTerminalAction, CreateNewTerminalAction.ID, nls.localize('createNewTerminal', "New terminal")),
-				new Separator(),
-				this.instantiationService.createInstance(CopyTerminalSelectionAction, CopyTerminalSelectionAction.ID, nls.localize('copy', "Copy")),
-				this.instantiationService.createInstance(TerminalPasteAction, TerminalPasteAction.ID, nls.localize('paste', "Paste"))
-			];
-			this.contextMenuActions.forEach(a => {
-				this.toDispose.push(a);
-			});
-		}
-		return this.contextMenuActions;
+		return this.actions;
 	}
 
 	public getActionItem(action: Action): IActionItem {
@@ -110,69 +88,15 @@ export class TerminalPanel extends Panel {
 		this.terminalService.initConfigHelper(parent);
 		DOM.addClass(this.parentDomElement, 'integrated-terminal');
 		this.themeStyleElement = document.createElement('style');
-		this.fontStyleElement = document.createElement('style');
 
 		this.terminalContainer = document.createElement('div');
 		DOM.addClass(this.terminalContainer, 'terminal-outer-container');
 		this.parentDomElement.appendChild(this.themeStyleElement);
-		this.parentDomElement.appendChild(this.fontStyleElement);
 		this.parentDomElement.appendChild(this.terminalContainer);
-
-		this.attachEventListeners();
 
 		this.configurationHelper = new TerminalConfigHelper(platform.platform, this.configurationService, parent);
 
 		return this.terminalService.createNew();
-	}
-
-	private attachEventListeners(): void {
-		this.toDispose.push(DOM.addDisposableListener(this.parentDomElement, 'mousedown', (event: MouseEvent) => {
-			if (this.terminalInstances.length === 0) {
-				return;
-			}
-
-			if (event.which === 2 && platform.isLinux) {
-				// Drop selection and focus terminal on Linux to enable middle button paste when click
-				// occurs on the selection itself.
-				this.terminalInstances[this.terminalService.getActiveTerminalIndex()].focus(true);
-			} else if (event.which === 3) {
-				// Trigger the context menu on right click
-				let anchor: HTMLElement | { x: number, y: number } = this.parentDomElement;
-				if (event instanceof MouseEvent) {
-					const standardEvent = new StandardMouseEvent(event);
-					anchor = { x: standardEvent.posx, y: standardEvent.posy };
-				}
-
-				this.contextMenuService.showContextMenu({
-					getAnchor: () => anchor,
-					getActions: () => TPromise.as(this.getContextMenuActions()),
-					getActionsContext: () => this.parentDomElement,
-					getKeyBinding: (action) => {
-						const opts = this.keybindingService.lookupKeybindings(action.id);
-						if (opts.length > 0) {
-							return opts[0]; // only take the first one
-						}
-						return null;
-					}
-				});
-			}
-			event.stopImmediatePropagation();
-		}));
-		this.toDispose.push(DOM.addDisposableListener(this.parentDomElement, 'mouseup', (event) => {
-			if (this.terminalInstances.length === 0) {
-				return;
-			}
-
-			if (event.which !== 3) {
-				this.terminalInstances[this.terminalService.getActiveTerminalIndex()].focus();
-			}
-		}));
-		this.toDispose.push(DOM.addDisposableListener(this.parentDomElement, 'keyup', (event: KeyboardEvent) => {
-			if (event.keyCode === 27) {
-				// Keep terminal open on escape
-				event.stopPropagation();
-			}
-		}));
 	}
 
 	public createNewTerminalInstance(terminalProcess: ITerminalProcess, terminalFocusContextKey: IKeybindingContextKey<boolean>): TPromise<void> {
@@ -209,7 +133,7 @@ export class TerminalPanel extends Panel {
 
 	private createTerminal(terminalProcess: ITerminalProcess, terminalFocusContextKey: IKeybindingContextKey<boolean>): TPromise<TerminalInstance> {
 		return new TPromise<TerminalInstance>(resolve => {
-			var terminalInstance = new TerminalInstance(terminalProcess, this.terminalContainer, this.contextMenuService, this.contextService, this.instantiationService, this.keybindingService, this.terminalService, this.messageService, terminalFocusContextKey, this.onTerminalInstanceExit.bind(this));
+			var terminalInstance = new TerminalInstance(terminalProcess, this.terminalContainer, this.contextService, this.terminalService, this.messageService, terminalFocusContextKey, this.onTerminalInstanceExit.bind(this));
 			this.terminalInstances.push(terminalInstance);
 			this.setActiveTerminal(this.terminalInstances.length - 1);
 			this.toDispose.push(this.themeService.onDidThemeChange(this.updateTheme.bind(this)));
@@ -286,26 +210,9 @@ export class TerminalPanel extends Panel {
 		if (this.terminalInstances.length === 0) {
 			return;
 		}
-		let newFont = this.configurationHelper.getFont();
+		this.terminalInstances[this.terminalService.getActiveTerminalIndex()].setFont(this.configurationHelper.getFont());
 		DOM.toggleClass(this.parentDomElement, 'enable-ligatures', this.configurationHelper.getFontLigaturesEnabled());
-		if (!this.font || this.fontsDiffer(this.font, newFont)) {
-			this.fontStyleElement.innerHTML = '.monaco-workbench .panel.integrated-terminal .xterm {' +
-				`font-family: ${newFont.fontFamily};` +
-				`font-size: ${newFont.fontSize};` +
-				`line-height: ${newFont.lineHeight};` +
-				'}';
-			this.font = newFont;
-		}
-		this.terminalInstances[this.terminalService.getActiveTerminalIndex()].setFont(newFont);
 		this.layout(new Dimension(this.parentDomElement.offsetWidth, this.parentDomElement.offsetHeight));
-	}
-
-	private fontsDiffer(a: ITerminalFont, b: ITerminalFont): boolean {
-		return a.charHeight !== b.charHeight ||
-			a.charWidth !== b.charWidth ||
-			a.fontFamily !== b.fontFamily ||
-			a.fontSize !== b.fontSize ||
-			a.lineHeight !== b.lineHeight;
 	}
 
 	private updateCursorBlink(): void {

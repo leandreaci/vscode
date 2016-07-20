@@ -154,7 +154,7 @@ export class FocusFirstGroupAction extends Action {
 
 		// Find left editor and focus it
 		let editors = this.editorService.getVisibleEditors();
-		for (let editor of editors) {
+		for (var editor of editors) {
 			if (editor.position === Position.LEFT) {
 				this.editorGroupService.focusGroup(Position.LEFT);
 
@@ -164,7 +164,7 @@ export class FocusFirstGroupAction extends Action {
 
 		// Since no editor is currently opened, try to open last history entry to the target side
 		let history = this.historyService.getHistory();
-		for (let input of history) {
+		for (var input of history) {
 
 			// For now only support to open resources from history to the side
 			if (!!getUntitledOrFileResource(input)) {
@@ -232,7 +232,7 @@ export abstract class BaseFocusSideGroupAction extends Action {
 		// Otherwise try to find a history entry to open to the target editor side
 		else if (referenceEditor) {
 			let history = this.historyService.getHistory();
-			for (let input of history) {
+			for (var input of history) {
 
 				// For now only support to open files from history to the side
 				if (!!getUntitledOrFileResource(input)) {
@@ -1269,54 +1269,6 @@ export class FocusLastEditorInStackAction extends Action {
 			if (editor) {
 				return this.editorService.openEditor(editor);
 			}
-		}
-
-		return TPromise.as(true);
-	}
-}
-
-export class MoveEditorToLeftGroupAction extends Action {
-
-	public static ID = 'workbench.action.moveEditorToLeftGroup';
-	public static LABEL = nls.localize('moveEditorToLeftGroup', "Move Editor into Group to the Left");
-
-	constructor(
-		id: string,
-		label: string,
-		@IEditorGroupService private editorGroupService: IEditorGroupService,
-		@IWorkbenchEditorService private editorService: IWorkbenchEditorService
-	) {
-		super(id, label);
-	}
-
-	public run(): TPromise<any> {
-		const activeEditor = this.editorService.getActiveEditor();
-		if (activeEditor && activeEditor.position !== Position.LEFT) {
-			this.editorGroupService.moveEditor(activeEditor.input, activeEditor.position, activeEditor.position - 1);
-		}
-
-		return TPromise.as(true);
-	}
-}
-
-export class MoveEditorToRightGroupAction extends Action {
-
-	public static ID = 'workbench.action.moveEditorToRightGroup';
-	public static LABEL = nls.localize('moveEditorToRightGroup', "Move Editor into Group to the Right");
-
-	constructor(
-		id: string,
-		label: string,
-		@IEditorGroupService private editorGroupService: IEditorGroupService,
-		@IWorkbenchEditorService private editorService: IWorkbenchEditorService
-	) {
-		super(id, label);
-	}
-
-	public run(): TPromise<any> {
-		const activeEditor = this.editorService.getActiveEditor();
-		if (activeEditor && activeEditor.position !== Position.RIGHT) {
-			this.editorGroupService.moveEditor(activeEditor.input, activeEditor.position, activeEditor.position + 1);
 		}
 
 		return TPromise.as(true);

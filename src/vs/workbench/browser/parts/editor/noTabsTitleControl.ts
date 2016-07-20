@@ -6,9 +6,13 @@
 'use strict';
 
 import 'vs/css!./media/notabstitle';
+import {IAction} from 'vs/base/common/actions';
+import {prepareActions} from 'vs/workbench/browser/actionBarRegistry';
 import errors = require('vs/base/common/errors');
-import {IEditorGroup} from 'vs/workbench/common/editor';
+import arrays = require('vs/base/common/arrays');
+import {IEditorGroup, EditorInput} from 'vs/workbench/common/editor';
 import DOM = require('vs/base/browser/dom');
+import {ToolBar} from 'vs/base/browser/ui/toolbar/toolbar';
 import {TitleControl} from 'vs/workbench/browser/parts/editor/titleControl';
 
 export class NoTabsTitleControl extends TitleControl {
@@ -16,6 +20,11 @@ export class NoTabsTitleControl extends TitleControl {
 	private titleLabel: HTMLElement;
 	private titleDecoration: HTMLElement;
 	private titleDescription: HTMLElement;
+
+	private editorActionsToolbar: ToolBar;
+
+	private currentPrimaryEditorActionIds: string[] = [];
+	private currentSecondaryEditorActionIds: string[] = [];
 
 	public setContext(group: IEditorGroup): void {
 		super.setContext(group);
@@ -58,10 +67,10 @@ export class NoTabsTitleControl extends TitleControl {
 		// Right Actions Container
 		const actionsContainer = document.createElement('div');
 		DOM.addClass(actionsContainer, 'title-actions');
-		this.titleContainer.appendChild(actionsContainer);
 
-		// Editor actions toolbar
-		this.createEditorActionsToolBar(actionsContainer);
+		this.editorActionsToolbar = this.doCreateToolbar(actionsContainer);
+
+		this.titleContainer.appendChild(actionsContainer);
 
 		// Context Menu
 		this.toDispose.push(DOM.addDisposableListener(this.titleContainer, DOM.EventType.CONTEXT_MENU, (e: Event) => this.onContextMenu({ group: this.context, editor: this.context.activeEditor }, e, this.titleContainer)));
@@ -112,7 +121,10 @@ export class NoTabsTitleControl extends TitleControl {
 			this.titleLabel.innerText = '';
 			this.titleDescription.innerText = '';
 
-			this.clearEditorActionsToolbar();
+			this.editorActionsToolbar.setActions([], [])();
+
+			this.currentPrimaryEditorActionIds = [];
+			this.currentSecondaryEditorActionIds = [];
 
 			return; // return early if we are being closed
 		}
@@ -156,6 +168,34 @@ export class NoTabsTitleControl extends TitleControl {
 		}
 
 		// Update Editor Actions Toolbar
-		this.updateEditorActionsToolbar();
+		let primaryEditorActions: IAction[] = [];
+		let secondaryEditorActions: IAction[] = [];
+		if (isActive) {
+			const editorActions = this.getEditorActions({ group, editor });
+			primaryEditorActions = prepareActions(editorActions.primary);
+			if (isActive && editor instanceof EditorInput && editor.supportsSplitEditor()) {
+				primaryEditorActions.push(this.splitEditorAction);
+			}
+			secondaryEditorActions = prepareActions(editorActions.secondary);
+		}
+
+		const primaryEditorActionIds = primaryEditorActions.map(a => a.id);
+		primaryEditorActionIds.push(this.closeEditorAction.id);
+		const secondaryEditorActionIds = secondaryEditorActions.map(a => a.id);
+
+		if (!arrays.equals(primaryEditorActionIds, this.currentPrimaryEditorActionIds) || !arrays.equals(secondaryEditorActionIds, this.currentSecondaryEditorActionIds)) {
+			this.editorActionsToolbar.setActions(primaryEditorActions, secondaryEditorActions)();
+			this.editorActionsToolbar.addPrimaryAction(this.closeEditorAction)();
+
+			this.currentPrimaryEditorActionIds = primaryEditorActionIds;
+			this.currentSecondaryEditorActionIds = secondaryEditorActionIds;
+		}
+	}
+
+	public dispose(): void {
+		super.dispose();
+
+		// Toolbars
+		this.editorActionsToolbar.dispose();
 	}
 }

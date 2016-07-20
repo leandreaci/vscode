@@ -7,7 +7,7 @@ import {TPromise} from 'vs/base/common/winjs.base';
 import {IPanel} from 'vs/workbench/common/panel';
 import {createDecorator, ServiceIdentifier} from 'vs/platform/instantiation/common/instantiation';
 
-export const IPanelService = createDecorator<IPanelService>('panelService');
+export var IPanelService = createDecorator<IPanelService>('panelService');
 
 export interface IPanelService {
 	_serviceBrand : ServiceIdentifier<any>;

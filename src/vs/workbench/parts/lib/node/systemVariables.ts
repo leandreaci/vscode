@@ -18,16 +18,13 @@ export class SystemVariables extends AbstractSystemVariables {
 	private _execPath: string;
 
 	// Optional workspaceRoot there to be used in tests.
-	constructor(private editorService: IWorkbenchEditorService, contextService: IWorkspaceContextService, workspaceRoot: URI = null, envVariables: { [key: string]: string } = process.env) {
+	constructor(private editorService: IWorkbenchEditorService, contextService: IWorkspaceContextService, workspaceRoot: URI = null) {
 		super();
-		let fsPath = '';
-		if (workspaceRoot || (contextService && contextService.getWorkspace())) {
-			fsPath = workspaceRoot ? workspaceRoot.fsPath : contextService.getWorkspace().resource.fsPath;
-		}
+		let fsPath = workspaceRoot ? workspaceRoot.fsPath : contextService.getWorkspace().resource.fsPath;
 		this._workspaceRoot = Paths.normalize(fsPath, true);
 		this._execPath = contextService ? contextService.getConfiguration().env.execPath : null;
-		Object.keys(envVariables).forEach(key => {
-			this[`env.${key}`] = envVariables[key];
+		Object.keys(process.env).forEach(key => {
+			this[`env.${ key }`] = process.env[key];
 		});
 	}
 

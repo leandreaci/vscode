@@ -111,10 +111,7 @@ export class CommonFindController extends Disposable implements editorCommon.IEd
 	}
 
 	public closeFindWidget(): void {
-		this._state.change({
-			isRevealed: false,
-			searchScope: null
-		}, false);
+		this._state.change({ isRevealed: false }, false);
 		this._editor.focus();
 	}
 
@@ -748,8 +745,7 @@ CommonEditorRegistry.registerEditorAction({
 		primary: KeyMod.CtrlCmd | KeyCode.F2
 	},
 	menuOpts: {
-		group: 'modification',
-		order: 2,
+		group: 'modification@101',
 		kbExpr: KbExpr.not(editorCommon.KEYBINDING_CONTEXT_EDITOR_READONLY)
 	}
 });

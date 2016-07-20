@@ -136,7 +136,7 @@ export class DefinitionAction extends EditorAction {
 			resource: uri,
 			options: {
 				selection: range,
-				revealIfVisible: !sideBySide
+				revealIfOpened: !sideBySide
 			}
 		}, sideBySide).then(editor => {
 			return <editorCommon.IEditor> editor.getControl();
@@ -374,23 +374,23 @@ class GotoDefinitionWithMouseEditorContribution implements editorCommon.IEditorC
 			return;
 		}
 
-		let hoverMessage: MarkedString = void 0;
+		let htmlMessage: MarkedString = void 0;;
 		if (text && text.trim().length > 0) {
 			if (isCode) {
-				hoverMessage = {
+				htmlMessage = {
 					language: model.getMode().getId(),
 					value: text
 				};
 			} else {
-				hoverMessage = textToMarkedString(text);
+				htmlMessage = textToMarkedString(text);
 			}
 		}
 
-		let newDecorations : editorCommon.IModelDeltaDecoration = {
+		let newDecorations = {
 			range: range,
 			options: {
 				inlineClassName: 'goto-definition-link',
-				hoverMessage
+				htmlMessage: [htmlMessage]
 			}
 		};
 
@@ -498,8 +498,7 @@ CommonEditorRegistry.registerEditorAction({
 		linux: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.F10 }
 	},
 	menuOpts: {
-		group: 'navigation',
-		order: 2,
+		group: 'navigation@11',
 		kbExpr: KbExpr.has(editorCommon.ModeContextKeys.hasDefinitionProvider)
 	}
 });
@@ -518,8 +517,7 @@ CommonEditorRegistry.registerEditorAction({
 		primary: goToDeclarationKb
 	},
 	menuOpts: {
-		group: 'navigation',
-		order: 1,
+		group: 'navigation@10',
 		kbExpr: KbExpr.has(editorCommon.ModeContextKeys.hasDefinitionProvider)
 	}
 });

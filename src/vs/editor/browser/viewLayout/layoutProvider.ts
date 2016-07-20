@@ -119,7 +119,7 @@ export class LayoutProvider extends ViewEventHandler implements IDisposable, ILa
 
 		this.scrollManager = new ScrollManager(configuration, privateViewEventBus, linesContent, viewDomNode, overflowGuardDomNode);
 
-		this.configuration.setMaxLineNumber(this.model.getMaxLineNumber());
+		this.configuration.setLineCount(this.model.getLineCount());
 
 		this.linesLayout = new LinesLayout(configuration, model);
 
@@ -131,7 +131,7 @@ export class LayoutProvider extends ViewEventHandler implements IDisposable, ILa
 	}
 
 	private updateLineCount(): void {
-		this.configuration.setMaxLineNumber(this.model.getMaxLineNumber());
+		this.configuration.setLineCount(this.model.getLineCount());
 	}
 
 	// ---- begin view event handlers

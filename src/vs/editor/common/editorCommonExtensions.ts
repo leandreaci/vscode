@@ -38,7 +38,6 @@ export interface IEditorCommandMenuOptions {
 	kbExpr: KbExpr;
 	menu?: MenuId;
 	group?: string;
-	order?: number;
 }
 
 // --- Editor Actions
@@ -204,15 +203,14 @@ class EditorContributionRegistry {
 		}
 
 		if (desc.menuOpts) {
-			let {menu, kbExpr, group, order} = desc.menuOpts;
+			let {menu, kbExpr, group} = desc.menuOpts;
 			MenuRegistry.appendMenuItem(menu || MenuId.EditorContext, {
 				command: {
 					id: desc.id,
 					title: desc.label
 				},
 				when: kbExpr,
-				group,
-				order
+				group
 			});
 		}
 

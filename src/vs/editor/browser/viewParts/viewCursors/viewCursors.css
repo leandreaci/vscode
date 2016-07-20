@@ -89,15 +89,15 @@
 	}
 }
 
-.cursor-blink {
+.cursor-blink > .cursor {
 	animation: cursor-blink 1s step-start 0s infinite;
 }
 
-.cursor-smooth {
+.cursor-smooth > .cursor {
 	animation: cursor-smooth 0.5s ease-in-out 0s infinite alternate;
 }
 
-.cursor-phase {
+.cursor-phase > .cursor {
 	animation: cursor-phase 0.5s ease-in-out 0s infinite alternate;
 }
 

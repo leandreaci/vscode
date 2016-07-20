@@ -392,10 +392,6 @@ export interface IEditorOptions {
 	 */
 	acceptSuggestionOnEnter?: boolean;
 	/**
-	 * Enable snippet suggestions. Default to 'true'.
-	 */
-	snippetSuggestions?: 'top' | 'bottom' | 'inline' | 'none';
-	/**
 	 * Enable selection highlight.
 	 * Defaults to true.
 	 */
@@ -804,7 +800,6 @@ export class EditorContribOptions {
 	formatOnType:boolean;
 	suggestOnTriggerCharacters: boolean;
 	acceptSuggestionOnEnter: boolean;
-	snippetSuggestions: 'top' | 'bottom' | 'inline' | 'none';
 	selectionHighlight:boolean;
 	referenceInfos: boolean;
 	folding: boolean;
@@ -823,7 +818,6 @@ export class EditorContribOptions {
 		formatOnType:boolean;
 		suggestOnTriggerCharacters: boolean;
 		acceptSuggestionOnEnter: boolean;
-		snippetSuggestions: 'top' | 'bottom' | 'inline' | 'none';
 		selectionHighlight:boolean;
 		referenceInfos: boolean;
 		folding: boolean;
@@ -838,7 +832,6 @@ export class EditorContribOptions {
 		this.formatOnType = Boolean(source.formatOnType);
 		this.suggestOnTriggerCharacters = Boolean(source.suggestOnTriggerCharacters);
 		this.acceptSuggestionOnEnter = Boolean(source.acceptSuggestionOnEnter);
-		this.snippetSuggestions = source.snippetSuggestions;
 		this.selectionHighlight = Boolean(source.selectionHighlight);
 		this.referenceInfos = Boolean(source.referenceInfos);
 		this.folding = Boolean(source.folding);
@@ -859,7 +852,6 @@ export class EditorContribOptions {
 			&& this.formatOnType === other.formatOnType
 			&& this.suggestOnTriggerCharacters === other.suggestOnTriggerCharacters
 			&& this.acceptSuggestionOnEnter === other.acceptSuggestionOnEnter
-			&& this.snippetSuggestions === other.snippetSuggestions
 			&& this.selectionHighlight === other.selectionHighlight
 			&& this.referenceInfos === other.referenceInfos
 			&& this.folding === other.folding
@@ -3203,7 +3195,7 @@ export interface IConfiguration {
 
 	editor:InternalEditorOptions;
 
-	setMaxLineNumber(maxLineNumber:number): void;
+	setLineCount(lineCount:number): void;
 }
 
 // --- view
@@ -4175,71 +4167,27 @@ export var EventType = {
 };
 
 /**
- * Positions in the view for cursor move command.
+ * Logical positions in the view for cursor move command.
  */
 export const CursorMoveViewPosition = {
 	LineStart: 'lineStart',
 	LineFirstNonWhitespaceCharacter: 'lineFirstNonWhitespaceCharacter',
 	LineColumnCenter: 'lineColumnCenter',
 	LineEnd: 'lineEnd',
-	LineLastNonWhitespaceCharacter: 'lineLastNonWhitespaceCharacter',
-	LineUp: 'lineUp',
-	LineDown: 'lineDown'
-};
-
-/**
- * Arguments for Cursor move command
- */
-export interface CursorMoveArguments {
-	to: string;
-	inSelectionMode?: boolean;
-	noOfLines?: number;
-	isPaged?: boolean;
-	pageSize?: number;
+	LineLastNonWhitespaceCharacter: 'lineLastNonWhitespaceCharacter'
 };
 
 /**
  * @internal
  */
-let isCursorMoveArgs= function(arg): boolean  {
-	if (!types.isObject(arg)) {
-		return false;
-	}
-
-	if (!types.isString(arg.to)) {
-		return false;
-	}
-
-	if (!types.isUndefined(arg.inSelectionMode) && !types.isBoolean(arg.inSelectionMode)) {
-		return false;
-	}
-
-	if (!types.isUndefined(arg.noOfLines) && !types.isNumber(arg.noOfLines)) {
-		return false;
-	}
-
-	if (!types.isUndefined(arg.isPaged) && !types.isBoolean(arg.isPaged)) {
-		return false;
-	}
-
-	if (!types.isUndefined(arg.pageSize) && !types.isNumber(arg.pageSize)) {
-		return false;
-	}
-
-	return true;
-};
-
-/**
- * @internal
- */
-export var CommandDescription = {
+export var CommandDescription= {
 	CursorMove: <ICommandHandlerDescription>{
 		description: nls.localize('editorCommand.cursorMove.description', "Move cursor to a logical position in the view"),
 		args: [
 			{
 				name: nls.localize('editorCommand.cursorMove.arg.name', "Cursor move argument"),
 				description: nls.localize('editorCommand.cursorMove.arg.description', "Argument containing mandatory 'to' value and an optional 'inSelectionMode' value. Value of 'to' has to be a defined value in `CursorMoveViewPosition`."),
-				constraint: isCursorMoveArgs
+				constraint: (arg) => types.isObject(arg) && types.isString(arg.to) && (types.isUndefined(arg.inSelectionMode) || types.isBoolean(arg.inSelectionMode))
 			}
 		]
 	}
@@ -4319,8 +4267,6 @@ export var Handler = {
 
 	Type:						'type',
 	ReplacePreviousChar:		'replacePreviousChar',
-	CompositionStart:			'compositionStart',
-	CompositionEnd:				'compositionEnd',
 	Paste:						'paste',
 
 	Tab:						'tab',

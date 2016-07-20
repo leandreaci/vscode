@@ -25,6 +25,7 @@ export class ViewCursors extends ViewPart {
 	private _readOnly: boolean;
 	private _cursorBlinking: editorCommon.TextEditorCursorBlinkingStyle;
 	private _cursorStyle: editorCommon.TextEditorCursorStyle;
+	private _canUseTranslate3d: boolean;
 
 	private _isVisible: boolean;
 
@@ -45,6 +46,7 @@ export class ViewCursors extends ViewPart {
 		this._readOnly = this._context.configuration.editor.readOnly;
 		this._cursorBlinking = this._context.configuration.editor.viewInfo.cursorBlinking;
 		this._cursorStyle = this._context.configuration.editor.viewInfo.cursorStyle;
+		this._canUseTranslate3d = context.configuration.editor.viewInfo.canUseTranslate3d;
 
 		this._primaryCursor = new ViewCursor(this._context, false);
 		this._secondaryCursors = [];
@@ -150,6 +152,9 @@ export class ViewCursors extends ViewPart {
 		}
 		if (e.viewInfo.cursorStyle) {
 			this._cursorStyle = this._context.configuration.editor.viewInfo.cursorStyle;
+		}
+		if (e.viewInfo.canUseTranslate3d) {
+			this._canUseTranslate3d = this._context.configuration.editor.viewInfo.canUseTranslate3d;
 		}
 
 		this._primaryCursor.onConfigurationChanged(e);
@@ -312,6 +317,12 @@ export class ViewCursors extends ViewPart {
 		this._primaryCursor.render(ctx);
 		for (var i = 0, len = this._secondaryCursors.length; i < len; i++) {
 			this._secondaryCursors[i].render(ctx);
+		}
+
+		if (this._canUseTranslate3d) {
+			this._domNode.setTransform('translate3d(0px, 0px, 0px)');
+		} else {
+			this._domNode.setTransform('');
 		}
 	}
 }

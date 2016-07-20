@@ -355,12 +355,14 @@ function _processThemeObject(themeId: string, themeDocument: ThemeDocument): str
 
 	if (editorSettings.background) {
 		let background = new Color(editorSettings.background);
+		//cssRules.push(`.monaco-editor.${themeSelector} { background-color: ${background}; }`);
 		cssRules.push(`.monaco-editor.${themeSelector} .monaco-editor-background { background-color: ${background}; }`);
 		cssRules.push(`.monaco-editor.${themeSelector} .glyph-margin { background-color: ${background}; }`);
 		cssRules.push(`.${themeSelector} .monaco-workbench .monaco-editor-background { background-color: ${background}; }`);
 	}
 	if (editorSettings.foreground) {
 		let foreground = new Color(editorSettings.foreground);
+		cssRules.push(`.monaco-editor.${themeSelector} { color: ${foreground}; }`);
 		cssRules.push(`.monaco-editor.${themeSelector} .token { color: ${foreground}; }`);
 	}
 	if (editorSettings.selection) {
@@ -390,7 +392,7 @@ function _settingsToStatements(settings: ThemeSettingStyle): string {
 	let statements: string[] = [];
 
 	for (let settingName in settings) {
-		const value = settings[settingName];
+		var value = settings[settingName];
 		switch (settingName) {
 			case 'foreground':
 				let foreground = new Color(value);

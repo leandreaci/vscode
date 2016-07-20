@@ -291,10 +291,6 @@ export class DebugService implements debug.IDebugService {
 			}
 		}));
 
-		this.toDisposeOnSessionEnd.push(this.session.onDidContinued(event => {
-			this.lazyTransitionToRunningState(event.body.allThreadsContinued ? undefined : event.body.threadId);
-		}));
-
 		this.toDisposeOnSessionEnd.push(this.session.onDidOutput(event => {
 			if (event.body && event.body.category === 'telemetry') {
 				// only log telemetry events from debug adapter if the adapter provided the telemetry key
@@ -831,7 +827,7 @@ export class DebugService implements debug.IDebugService {
 
 		if (source.inMemory) {
 			// internal module
-			if (source.reference !== 0 && this.session && source.available) {
+			if (source.reference !== 0 && this.session) {
 				return this.session.source({ sourceReference: source.reference }).then(response => {
 					const mime = response.body.mimeType ? response.body.mimeType : guessMimeTypes(source.name)[0];
 					return this.getDebugStringEditorInput(source, response.body.content, mime);

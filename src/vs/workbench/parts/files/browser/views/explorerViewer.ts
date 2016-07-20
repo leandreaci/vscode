@@ -285,8 +285,7 @@ export class FileRenderer extends ActionsRenderer implements IRenderer {
 		let editableData: IEditableData = this.state.getEditableData(stat);
 		if (!editableData) {
 			let label = $('.explorer-item-label').appendTo(item);
-			$('a.plain').text(stat.name).title(stat.resource.fsPath).appendTo(label);
-
+			$('a.plain').text(stat.name).appendTo(label);
 			return null;
 		}
 
@@ -319,7 +318,7 @@ export class FileRenderer extends ActionsRenderer implements IRenderer {
 			}, 0);
 		});
 
-		const toDispose = [
+		var toDispose = [
 			inputBox,
 			DOM.addStandardDisposableListener(inputBox.inputElement, DOM.EventType.KEY_DOWN, (e: IKeyboardEvent) => {
 				if (e.equals(CommonKeybindings.ENTER)) {

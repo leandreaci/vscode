@@ -12,7 +12,6 @@ import {ICommandDescriptor, KeybindingsRegistry} from 'vs/platform/keybinding/co
 import {ICommandHandlerDescription} from 'vs/platform/commands/common/commands';
 import * as editorCommon from 'vs/editor/common/editorCommon';
 import {ICodeEditorService} from 'vs/editor/common/services/codeEditorService';
-import {ICommandHandler} from 'vs/platform/commands/common/commands';
 
 const H = editorCommon.Handler;
 const D = editorCommon.CommandDescription;
@@ -73,10 +72,10 @@ function registerCoreCommand(handlerId: string, kb: IKeybindings, weight?: numbe
 	KeybindingsRegistry.registerCommandDesc(desc);
 }
 
-function registerOverwritableCommand(handlerId:string, handler:ICommandHandler): void {
+function registerCoreDispatchCommand2(handlerId: string) {
 	let desc: ICommandDescriptor = {
 		id: handlerId,
-		handler: handler,
+		handler: triggerEditorHandler.bind(null, handlerId),
 		weight: KeybindingsRegistry.WEIGHT.editorCore(),
 		when: null,
 		primary: 0
@@ -85,24 +84,21 @@ function registerOverwritableCommand(handlerId:string, handler:ICommandHandler):
 
 	let desc2: ICommandDescriptor = {
 		id: 'default:' + handlerId,
-		handler: handler,
+		handler: (accessor: ServicesAccessor, args: any) => {
+			withCodeEditorFromCommandHandler(handlerId, accessor, (editor) => {
+				editor.trigger('keyboard', handlerId, args);
+			});
+		},
 		weight: KeybindingsRegistry.WEIGHT.editorCore(),
 		when: null,
 		primary: 0
 	};
 	KeybindingsRegistry.registerCommandDesc(desc2);
 }
-
-function registerCoreDispatchCommand(handlerId: string): void {
-	registerOverwritableCommand(handlerId, triggerEditorHandler.bind(null, handlerId));
-}
-registerCoreDispatchCommand(H.Type);
-registerCoreDispatchCommand(H.ReplacePreviousChar);
-registerCoreDispatchCommand(H.Paste);
-registerCoreDispatchCommand(H.Cut);
-
-registerOverwritableCommand(H.CompositionStart, () => {});
-registerOverwritableCommand(H.CompositionEnd, () => {});
+registerCoreDispatchCommand2(H.Type);
+registerCoreDispatchCommand2(H.ReplacePreviousChar);
+registerCoreDispatchCommand2(H.Paste);
+registerCoreDispatchCommand2(H.Cut);
 
 function getMacWordNavigationKB(shift:boolean, key:KeyCode): number {
 	// For macs, word navigation is based on the alt modifier
@@ -407,7 +403,6 @@ function selectAll(accessor: ServicesAccessor, args: any): void {
 	// Redirecting to last active editor
 	let activeEditor = getActiveEditor(accessor);
 	if (activeEditor) {
-		activeEditor.focus();
 		activeEditor.trigger('keyboard', HANDLER, args);
 		return;
 	}
@@ -416,6 +411,6 @@ KeybindingsRegistry.registerCommandDesc({
 	id: 'editor.action.selectAll',
 	handler: selectAll,
 	weight: KeybindingsRegistry.WEIGHT.editorCore(),
-	when: KbExpr.has(editorCommon.KEYBINDING_CONTEXT_EDITOR_TEXT_FOCUS),
+	when: null,
 	primary: KeyMod.CtrlCmd | KeyCode.KEY_A
 });

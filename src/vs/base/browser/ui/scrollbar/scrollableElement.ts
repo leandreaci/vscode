@@ -240,12 +240,12 @@ export class ScrollableElement extends Widget {
 			let deltaX = e.deltaX * this._options.mouseWheelScrollSensitivity;
 
 			if (this._options.flipAxes) {
-				deltaY = deltaX;
-				deltaX = deltaY;
+				deltaY = e.deltaX;
+				deltaX = e.deltaY;
 			}
 
 			if (this._options.scrollYToX && !deltaX) {
-				deltaX = deltaY;
+				deltaX = e.deltaY;
 				deltaY = 0;
 			}
 
